@@ -11,8 +11,8 @@
  *
  * 感谢所有测试人员
  * ========= 青龙--配置文件 =========
- * 变量格式: export jhck='zhc_token'  多个账号用 @ 或者 换行分割
- * 抓取ck中zhc_token内容
+ * 变量格式: export jhck='param'  多个账号用 @ 或者 换行分割
+ * 抓取ck中param内容
  * 
  */
 
