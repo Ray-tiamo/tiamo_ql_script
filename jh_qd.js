@@ -6,12 +6,13 @@
  *
  * cron 30 6 * * *  yml2213_javascript_master/jh_qd.js
  *
- * 12-31 在9点之后才能签到成功
+ * 12-31 新建脚本
+ * 1-2   新增token获取方式
  *
  * 感谢所有测试人员
  * ========= 青龙--配置文件 =========
  * 变量格式: export jhck='zhc_token'  多个账号用 @ 或者 换行分割
- * 抓取ck中student_info内容
+ * 抓取ck中zhc_token内容
  * 
  */
 
@@ -21,14 +22,22 @@ const Notify = 1 		//0为关闭通知，1为打开通知,默认为1
 const debug = 0 		//0为关闭调试，1为打开调试,默认为0
 ///////////////////////////////////////////////////////////////////
 let ckStr = process.env.jhck;
+// 截取地址的倒数第二个???
+let archId = "ccb_gjb";
+// cc币注册在微信公众号内的APPID
+let appId = "wxd513efdbf26b5744";
+// 通过公众号连接，跳转的url（https://event.ccbft.com/e/ccb_gjb/polFsWD2jPnjhOx9ruVBcA?CCB_Chnl=1000102），截取链接最后的地址字符串
+let shortId = "polFsWD2jPnjhOx9ruVBcA";
+let ccb_gjb_param = "";
 let msg = "";
-let ck = "";
-let uid = '';
+//let ck = "";
+let token = "";
+let userId = '';
 let ck_status = true;
 
 ///////////////////////////////////////////////////////////////////
 let Version = '\n 逐鹿少年   2022/12/31     建行ccb签到脚本'
-let thank = `感谢 逐鹿少年 的投稿`
+let thank = `感谢其他大佬的答题api`
 let test = `脚本测试中,有bug及时反馈!     脚本测试中,有bug及时反馈!`
 
 ///////////////////////////////////////////////////////////////////
@@ -51,7 +60,6 @@ async function tips(ckArr) {
         new Date().getTime() + new Date().getTimezoneOffset() * 60 * 1000 + 8 * 60 * 60 * 1000
     ).toLocaleString()} \n==================================================`);
     //await wyy();  //开启网抑云语句
-
     console.log(`\n=================== 共找到 ${ckArr.length} 个账号 ===================`);
     debugLog(`【debug】 这是你的账号数组:\n ${ckArr}`);
 }
@@ -62,11 +70,8 @@ async function tips(ckArr) {
     for (let index = 0; index < ckArr.length; index++) {
         let num = index + 1;
         console.log(`------------- 开始【第 ${num} 个账号】-------------`);
-
         ck = ckArr[index].split("&");
-
         debugLog(`【debug】 这是你第 ${num} 账号信息:\n ${ck}`);
-
         jhccb_headers = {
             'User-Agent': 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.54',
             'Content-Type': 'application/json',
@@ -80,69 +85,125 @@ async function tips(ckArr) {
 
 
 async function start() {
+    console.log("➡️开始 账户登录");
+    await getredirectUrl();
+    await $.wait(2 * 1000);
 
-    console.log("开始 用户信息获取");
-    await getuser();
-    //await $.wait(2 * 1000);
     if (ck_status) {
-        console.log("开始 每日领cc豆");
+        console.log("➡️开始 获取用户信息");
+        await getuser();
+        await $.wait(2 * 1000);
+
+        console.log("➡️开始 每日领cc豆");
         await LevelReward();
         await $.wait(2 * 1000);
 
-        console.log("开始 成长值签到");
-        await signin();
+        console.log("➡️开始 成长值签到");
+        await getUserInfo();
         await $.wait(2 * 1000);
 
-        console.log("开始 执行浏览任务");
+        console.log("➡️开始 执行浏览任务");
         await tasklist();
         await $.wait(2 * 1000);
 
-        console.log("开始 消费任务报名");
+        console.log("➡️开始 消费任务报名");
         await tasklist_pay();
         await $.wait(2 * 1000);
     }
 }
 
 /**
-* 用户信息获取    httpPost
+* 获取redirectUrl    httpPost
 */
-async function getuser() {
+async function getredirectUrl() {
+    ccb_gjb_param = {"appId": appId, "shortId": shortId, "archId": archId, "wParam": ck[0], "channelId": "wx", "ifWxFirst": true}
     let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/user/getUser?zhc_token=${ck}`,
+        url: 'https://event.ccbft.com/api/flow/nf/shortLink/redirect/ccb_gjb?CCB_Chnl=1000102',
         headers: jhccb_headers,
-        body: '{}'
+        body: JSON.stringify(ccb_gjb_param)
     };
-    let result = await httpPost(Options, `建行ccb用户信息获取`);
+    let result = await httpPost(Options, `获取redirectUrl`);
     if (result.code == 200) {
-        console.log(` 建行用户信息获取: 用户名:${result.data.userDTO.userName};手机号:${result.data.userDTO.mobile} ✅ `);
-        msg += ` 建行用户信息获取: 用户名:${result.data.userDTO.userName};手机号:${result.data.userDTO.mobile} ✅ `;
-        uid = result.data.userDTO.userId;
-    } else if (result.code == 401) {
-        console.log(`账号状态:${result.message}`);
-        msg += `账号状态:${result.message}☹️`
-        return ck_status = false;
+        //console.log(` 当前获取到redirectUrl:${result.data.redirectUrl} ✅ `);
+        //msg += ` 当前获取到redirectUrl:${result.data.redirectUrl} ✅ `;
+        token1 = result.data.redirectUrl.match(/token=(.*)&/)[1];
+        await gettoken(token1);
     } else {
-        console.log(` 建行用户信息获取:   失败 ❌ 了呢,原因未知！\n ${result} `);
-        msg += ` 建行用户信息获取:   失败 ❌ 了呢,原因未知！\n ${result} `;
+        console.log(` 获取redirectUrl:   失败 ❌ 了呢,原因未知！\n ${result} `);
+        msg += ` 获取redirectUrl:   失败 ❌ 了呢,原因未知！\n ${result} `;
         return ck_status = false;
     }
 }
 
 /**
-* 等级奖励-查询    httpPost
+* 登录获取token    httpPost
+*/
+async function gettoken(token1) {
+    let Options = {
+        url: 'https://m3.dmsp.ccb.com/api/businessCenter/auth/login',
+        headers: jhccb_headers,
+        body: JSON.stringify({ "token": token1, "channelId": "wx" })
+    };
+    let result = await httpPost(Options, `登录获取token`);
+    if (result.code == 200) {
+        console.log(` 获取token状态:${result.message};token:${result.data.token} ✅ `);
+        msg += ` 获取token状态:${result.message};token:${result.data.token} ✅ `;
+        token = result.data.token;
+    } else if (result.code == 510) {
+        console.log(`获取token状态:${result.message}`);
+        msg += `获取token状态:${result.message}☹️`
+        return ck_status = false;
+    } else {
+        console.log(` 获取token状态:   失败 ❌ 了呢,原因未知！\n ${result} `);
+        msg += ` 获取token状态:   失败 ❌ 了呢,原因未知！\n ${result} `;
+        return ck_status = false;
+    }
+}
+
+/**
+* 获取用户信息    httpPost
+*/
+async function getuser() {
+    url_getUser = 'https://event.ccbft.com/api/businessCenter/user/getUser'
+    let Options = {
+        url: url_getUser + '?zhc_token=' + token,
+        headers: jhccb_headers,
+        body: '{}'
+    };
+    let result = await httpPost(Options, `获取用户信息`);
+    if (result.code == 200) {
+        console.log(` 当前用户名:${result.data.userDTO.userName};手机号:${result.data.userDTO.mobile} ✅ `);
+        msg += ` 当前用户名${result.data.userDTO.userName};手机号:${result.data.userDTO.mobile} ✅ `;
+        userId = result.data.userDTO.userId;
+    /**
+    } else if (result.code == 401) {
+        console.log(`账号状态:${result.message}`);
+        msg += `账号状态:${result.message}☹️`
+        return ck_status = false;
+    */
+    } else {
+        console.log(` 获取用户信息:   失败 ❌ 了呢,原因未知！\n ${result} `);
+        msg += ` 获取用户信息:   失败 ❌ 了呢,原因未知！\n ${result} `;
+        // return ck_status = false;
+    }
+}
+
+/**
+* 等级奖励-查询账户等级信息    httpPost
 */
 async function LevelReward() {
+    url_LevelReward = 'https://m3.dmsp.ccb.com/api/businessCenter/mainVenue/getUserState'
     let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/mainVenue/getUserState?zhc_token=${ck}`,
+        url: url_LevelReward + '?zhc_token=' + token,
         headers: jhccb_headers,
         body: ''
     };
-    let result = await httpPost(Options, `建行ccb签到领cc豆`);
+    let result = await httpPost(Options, `查询账户等级信息`);
 
     if (result.code == 200) {
-        console.log(` 建行ccb签到领cc豆:当前等级:${result.data.level},${result.data.zhcRewardInfo.rewardName} 🎉 `);
-        msg += ` 建行ccb签到领cc豆:当前等级:${result.data.level},${result.data.zhcRewardInfo.rewardName} 🎉 `;
-        if (result.data.receiveResult == 00) {
+        console.log(` 当前账户等级:${result.data.currentProtectLevel}(${result.data.zhcRewardInfo.rewardName}),成长值：${result.data.growthExp} / ${result.data.nextLevelNeedGrowthExp},升到下一级还差:${result.data.needGrowthExp}点成长值 🎉 `);
+        msg += ` 当前账户等级:${result.data.currentProtectLevel}(${result.data.zhcRewardInfo.rewardName}),成长值：${result.data.growthExp} / ${result.data.nextLevelNeedGrowthExp},升到下一级还差:${result.data.needGrowthExp}点成长值 🎉 `;
+        if (result.data.receiveResult != '00') {
             //判断是否浏览，是否领取奖励 此项为未浏览未领取奖励
             let level = result.data.level;
             let rewardId = result.data.zhcRewardInfo.id;
@@ -158,47 +219,26 @@ async function LevelReward() {
     }
 }
 
-
 /**
  * 等级奖励-每日领cc豆    httpPost
  */
 async function getLevelReward(level, rewardId, rewardType) {
+    url_receiveLevelReward = 'https://event.ccbft.com/api/businessCenter/mainVenue/receiveLevelReward'
     let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/mainVenue/receiveLevelReward?zhc_token=${ck}`,
+        url: url_receiveLevelReward + '?zhc_token=' + token,
         headers: jhccb_headers,
-        body: JSON.stringify({ "userId": uid, "level": level, "rewardId": rewardId, "levelRewardType": rewardType })
+        body: JSON.stringify({ "userId": userId, "level": level, "rewardId": rewardId, "levelRewardType": rewardType })
     };
-    let result = await httpPost(Options, `建行ccb每日领cc豆`);
+    let result = await httpPost(Options, `每日领取首页CC币`);
 
     if (result.code == 200) {
-        day_num = result.data.currentDay;
+        // day_num = result.data.currentDay;
         // console.log(taskArr);
-        console.log(` 每日领cc豆:领取状态${result.message}    🎉 `);
-        msg += ` 每日领cc豆:领取状态${result.message}    🎉 `;
+        console.log(` 每日领取首页CC币:领取状态${result.message}    🎉 `);
+        msg += ` 每日领取首页CC币:领取状态${result.message}    🎉 `;
     } else {
-        console.log(` 每日领cc豆: 失败 ❌ 了呢,原因未知！\n  ${result} `);
-        msg += ` 每日领cc豆:   失败 ❌ 了呢,原因未知！\n ${result} `;
-    }
-}
-
-/**
- * 成长值签到    httpPost
- */
-async function signin() {
-    let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/signin?zhc_token=${ck}`,
-        headers: jhccb_headers,
-        body: JSON.stringify({ "taskId": 9 })
-    };
-    let result = await httpPost(Options, `建行ccb成长值签到`);
-
-    if (result.code == 500) {
-        console.log(` 成长值签到: ${result.message} 🎉 `);
-        msg += ` 成长值签到: ${result.message} 🎉 `;
-        await getUserInfo();
-    } else {
-        console.log(` 成长值签到:   失败 ❌ 了呢,原因未知！\n ${result} `);
-        msg += ` 成长值签到:   失败 ❌ 了呢,原因未知！\n ${result} `;
+        console.log(` 每日领取首页CC币: 失败 ❌ 了呢,原因未知！\n  ${result} `);
+        msg += ` 每日领取首页CC币:   失败 ❌ 了呢,原因未知！\n ${result} `;
     }
 }
 
@@ -206,21 +246,48 @@ async function signin() {
  * 成长值签到信息    httpPost
  */
 async function getUserInfo() {
+    url_UserInfo = 'https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/getUserInfo'
     let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/getUserInfo?zhc_token=${ck}`,
+        url: url_UserInfo + '?zhc_token=' + token,
+        // url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/getUserInfo?zhc_token=${ck}`,
         headers: jhccb_headers,
         body: '{}'
     };
     let result = await httpPost(Options, `成长值签到查询`);
-
     if (result.code == 200) {
-        day_num = result.data.currentDay;
+        // day_num = result.data.currentDay;
         // console.log(taskArr);
-        console.log(` 成长值签到查询:累计签到${result.data.currentDay}天, 获得成长值${result.data.settings[day_num - 1].rewards[0].rewardValue}    🎉 `);
-        msg += ` 成长值签到查询:累计签到${result.data.currentDay}天, 获得成长值${result.data.settings[day_num - 1].rewards[0].rewardValue}    🎉 `;
+        taskId = result.data.taskId;
+        console.log(` 签到状态：${result.data.isSign}, 当前签到天数${result.data.currentDay} 🎉 `);
+        msg += ` 签到状态：${result.data.isSign}, 当前签到天数${result.data.currentDay} 🎉 `;
+        await signin(taskId);
+        //msg += ` 成长值签到查询:累计签到${result.data.currentDay}天, 获得成长值${result.data.settings[day_num - 1].rewards[0].rewardValue}    🎉 `;
     } else {
         console.log(` 成长值签到信息: 失败 ❌ 了呢,原因未知！\n  ${result} `);
         msg += ` 成长值签到信息:   失败 ❌ 了呢,原因未知！\n ${result} `;
+    }
+}
+
+/**
+ * 成长值签到    httpPost
+ */
+async function signin(taskId) {
+    url_signin = 'https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/signin'
+    let Options = {
+        url: url_signin + '?zhc_token=' + token,
+        // url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/signin?zhc_token=${ck}`,
+        headers: jhccb_headers,
+        body: JSON.stringify({ "taskId": 9 })
+    };
+    let result = await httpPost(Options, `成长值签到`);
+
+    if (result.code == 500) {
+        console.log(` 成长值签到: ${result.message} 🎉 `);
+        msg += ` 成长值签到: ${result.message} 🎉 `;
+
+    } else {
+        console.log(` 成长值签到:   失败 ❌ 了呢,原因未知！\n ${result} `);
+        msg += ` 成长值签到:   失败 ❌ 了呢,原因未知！\n ${result} `;
     }
 }
 
@@ -229,7 +296,7 @@ async function getUserInfo() {
  */
 async function tasklist() {
     let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/getTaskList?zhc_token=${ck}`,
+        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/getTaskList?zhc_token=${token}`,
         headers: jhccb_headers,
         body: JSON.stringify({ "publishChannels": "03", "regionId": "110000" })
     };
@@ -251,6 +318,7 @@ async function tasklist() {
                 await dotask_receive(name, task_id);
             } else {
                 console.log(`${taskArr[index].mainTitle} : 任务已完成,明天再来吧~!`);
+                msg += `${taskArr[index].mainTitle} : 任务已完成,明天再来吧~!`;
             }
         }
         //await walk();
@@ -267,7 +335,7 @@ async function tasklist() {
 */
 async function dotask(name, task_id) {
     let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/browseTask?zhc_token=${ck}`,
+        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/browseTask?zhc_token=${token}`,
         headers: jhccb_headers,
         body: JSON.stringify({ "taskId": task_id, "browseSec": 1 })
     };
@@ -289,7 +357,7 @@ async function dotask(name, task_id) {
 */
 async function dotask_receive(name, task_id) {
     let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/receiveReward?zhc_token=${ck}`,
+        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/receiveReward?zhc_token=${token}`,
         headers: jhccb_headers,
         body: JSON.stringify({ "taskId": task_id })
     };
@@ -306,11 +374,11 @@ async function dotask_receive(name, task_id) {
 }
 
 /**
- * 任务中心 -- 支付消费    httpPost
+ * 任务中心 -- 支付消费查询    httpPost
  */
 async function tasklist_pay() {
     let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/getTaskList?zhc_token=${ck}`,
+        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/getTaskList?zhc_token=${token}`,
         headers: jhccb_headers,
         body: JSON.stringify({ "publishChannels": "03", "regionId": "110000" })
     };
@@ -349,7 +417,7 @@ async function tasklist_pay() {
 */
 async function dotask_pay(name, task_id) {
     let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/joinTask?zhc_token=${ck}`,
+        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/joinTask?zhc_token=${token}`,
         headers: jhccb_headers,
         body: { "taskId": task_id, "channelId": "03", "ccbFlag": "Y", "token": ck }
     };
