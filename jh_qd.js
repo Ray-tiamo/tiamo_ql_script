@@ -4,7 +4,7 @@
  *
  * 建行签到
  *
- * cron 30 6 * * *  yml2213_javascript_master/jh_qd.js
+ * cron 30 6 * * *  Reliablc_tiamo_script/jh_qd.js
  *
  * 12-31 在9点之后才能签到成功
  *
