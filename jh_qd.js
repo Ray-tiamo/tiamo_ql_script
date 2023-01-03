@@ -22,11 +22,8 @@ const Notify = 1 		//0为关闭通知，1为打开通知,默认为1
 const debug = 0 		//0为关闭调试，1为打开调试,默认为0
 ///////////////////////////////////////////////////////////////////
 let ckStr = process.env.jhck;
-// 截取地址的倒数第二个???
 let archId = "ccb_gjb";
-// cc币注册在微信公众号内的APPID
 let appId = "wxd513efdbf26b5744";
-// 通过公众号连接，跳转的url（https://event.ccbft.com/e/ccb_gjb/polFsWD2jPnjhOx9ruVBcA?CCB_Chnl=1000102），截取链接最后的地址字符串
 let shortId = "polFsWD2jPnjhOx9ruVBcA";
 let ccb_gjb_param = "";
 let msg = "";
@@ -118,7 +115,7 @@ async function start() {
 async function getredirectUrl() {
     ccb_gjb_param = {"appId": appId, "shortId": shortId, "archId": archId, "wParam": ck[0], "channelId": "wx", "ifWxFirst": true}
     let Options = {
-        url: 'https://event.ccbft.com/api/flow/nf/shortLink/redirect/ccb_gjb?CCB_Chnl=1000102',
+        url: 'https://event.ccbft.com/api/flow/nf/shortLink/redirect/ccb_gjb',
         headers: jhccb_headers,
         body: JSON.stringify(ccb_gjb_param)
     };
