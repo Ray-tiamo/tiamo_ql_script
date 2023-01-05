@@ -1,10 +1,10 @@
 /**
- * 脚本地址: jh_qd.js
+ * 脚本地址: jhzfj_hd.js
  * 转载请留信息,谢谢
  *
- * 建行签到
+ * 建行造福季签到
  *
- * cron 30 6 * * *  Reliablc_tiamo_script/jh_qd.js
+ * cron 30 6 * * *  Reliablc_tiamo_script/jhzfj_hd.js
  *
  *
  * 感谢所有测试人员
@@ -14,7 +14,7 @@
  * 
  */
 
- const $ = new Env("建行ccb签到");
+ const $ = new Env("建行造福季签到");
  const notify = $.isNode() ? require("./sendNotify") : "";
  const Notify = 1 		//0为关闭通知，1为打开通知,默认为1
  const debug = 0 		//0为关闭调试，1为打开调试,默认为0
@@ -26,7 +26,7 @@
  let ck_status = true;
  
  ///////////////////////////////////////////////////////////////////
- let Version = '\n 逐鹿少年   2022/12/31     建行ccb签到脚本'
+ let Version = '\n 逐鹿少年   2022/12/31     建行造福季签到脚本'
  let thank = `感谢 逐鹿少年 的投稿`
  let test = `脚本测试中,有bug及时反馈!     脚本测试中,有bug及时反馈!`
  
