@@ -7,7 +7,7 @@
 
 
 ### Hi there 👋
-[![Tiamo's github stats](https://github-readme-stats.vercel.app/api?username=reliablc&show_icons=true)](https://github.com/Reliablc)
+[![Tiamo's github stats](https://github-readme-stats.vercel.app/api?username=Ray-tiamo&show_icons=true)](https://github.com/Ray-tiamo)
 
 如果您觉得这个项目不错的话可以在右上角给颗⭐ 吗？
 感谢这么**好看** **帅气**的你给的星星⭐️ 呀!
