@@ -1,42 +1,40 @@
 /**
- * 脚本地址: jh_qd.js
+ * 脚本地址: hxsd_qd.js
  * 转载请留信息,谢谢
  *
- * 建行签到
+ * 火星教育打卡
  *
- * cron 30 6 * * *  yml2213_javascript_master/jh_qd.js
+ * 20 9,18 * *  Reliablc_tiamo_script//hxsd.js
  *
- * 12-31 在9点之后才能签到成功
+ * 12-31 在9点之后才能打卡成功
  *
  * 感谢所有测试人员
  * ========= 青龙--配置文件 =========
- * 变量格式: export jhck='zhc_token'  多个账号用 @ 或者 换行分割
- * 抓取ck中student_info内容
+ * 变量格式: export hxsdck='student_info=****'  多个账号用 @ 或者 换行分割
+ * 抓取ck中student_info 内容
  * 
  */
 
-const $ = new Env("建行ccb签到");
+const $ = new Env("火星时代打卡");
 const notify = $.isNode() ? require("./sendNotify") : "";
 const Notify = 1 		//0为关闭通知，1为打开通知,默认为1
 const debug = 0 		//0为关闭调试，1为打开调试,默认为0
 ///////////////////////////////////////////////////////////////////
-let ckStr = process.env.jhck;
+let ckStr = process.env.hxsdck;
 let msg = "";
 let ck = "";
-let uid = '';
-let ck_status = true;
 
 ///////////////////////////////////////////////////////////////////
-let Version = '\n 逐鹿少年   2022/12/31     建行ccb签到脚本'
-let thank = `感谢 逐鹿少年 的投稿`
+let Version = '\n tiamo   2022/12/31     火星时代打卡脚本'
+let thank = `感谢 xx 的投稿`
 let test = `脚本测试中,有bug及时反馈!     脚本测试中,有bug及时反馈!`
 
 ///////////////////////////////////////////////////////////////////
 
 async function tips(ckArr) {
 
-    console.log(`${Version}`);
-    msg += `${Version}`
+    //console.log(`${Version}`);
+    //msg += `${Version}`
 
     // console.log(thank);
     // msg += `${thank}`
@@ -50,26 +48,22 @@ async function tips(ckArr) {
     console.log(`==================================================\n 脚本执行 - 北京时间(UTC+8): ${new Date(
         new Date().getTime() + new Date().getTimezoneOffset() * 60 * 1000 + 8 * 60 * 60 * 1000
     ).toLocaleString()} \n==================================================`);
-    //await wyy();  //开启网抑云语句
 
     console.log(`\n=================== 共找到 ${ckArr.length} 个账号 ===================`);
     debugLog(`【debug】 这是你的账号数组:\n ${ckArr}`);
 }
 
 !(async () => {
-    let ckArr = await getCks(ckStr, "jhck");
+    let ckArr = await getCks(ckStr, "hxsdck");
     await tips(ckArr);
     for (let index = 0; index < ckArr.length; index++) {
         let num = index + 1;
         console.log(`------------- 开始【第 ${num} 个账号】-------------`);
-
         ck = ckArr[index].split("&");
-
         debugLog(`【debug】 这是你第 ${num} 账号信息:\n ${ck}`);
-
-        jhccb_headers = {
-            'User-Agent': 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.54',
-            'Content-Type': 'application/json',
+        hxsd_headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.54',
+            'Cookie': ck,
         }
         await start();
     }
@@ -78,303 +72,36 @@ async function tips(ckArr) {
     .catch((e) => $.logErr(e))
     .finally(() => $.done());
 
-
 async function start() {
 
-    console.log("开始 用户信息获取");
-    await getuser();
-    //await $.wait(2 * 1000);
-    if (ck_status) {
-        console.log("开始 每日领cc豆");
-        await LevelReward();
-        await $.wait(2 * 1000);
+    console.log("开始 火星时代打卡");
+    await user_info();
+    //await $.wait(3 * 1000);
 
-        console.log("开始 成长值签到");
-        await signin();
-        await $.wait(2 * 1000);
-
-        console.log("开始 执行浏览任务");
-        await tasklist();
-        await $.wait(2 * 1000);
-
-        console.log("开始 消费任务报名");
-        await tasklist_pay();
-        await $.wait(2 * 1000);
-    }
 }
 
 /**
-* 用户信息获取    httpPost
-*/
-async function getuser() {
-    let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/user/getUser?zhc_token=${ck}`,
-        headers: jhccb_headers,
-        body: '{}'
-    };
-    let result = await httpPost(Options, `建行ccb用户信息获取`);
-    if (result.code == 200) {
-        console.log(` 建行用户信息获取: 用户名:${result.data.userDTO.userName};手机号:${result.data.userDTO.mobile} ✅ `);
-        msg += ` 建行用户信息获取: 用户名:${result.data.userDTO.userName};手机号:${result.data.userDTO.mobile} ✅ `;
-        uid = result.data.userDTO.userId;
-    } else if (result.code == 401) {
-        console.log(`账号状态:${result.message}`);
-        msg += `账号状态:${result.message}☹️`
-        return ck_status = false;
-    } else {
-        console.log(` 建行用户信息获取:   失败 ❌ 了呢,原因未知！\n ${result} `);
-        msg += ` 建行用户信息获取:   失败 ❌ 了呢,原因未知！\n ${result} `;
-        return ck_status = false;
-    }
-}
-
-/**
-* 等级奖励-查询    httpPost
-*/
-async function LevelReward() {
-    let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/mainVenue/getUserState?zhc_token=${ck}`,
-        headers: jhccb_headers,
-        body: ''
-    };
-    let result = await httpPost(Options, `建行ccb签到领cc豆`);
-
-    if (result.code == 200) {
-        console.log(` 建行ccb签到领cc豆:当前等级:${result.data.level},${result.data.zhcRewardInfo.rewardName} 🎉 `);
-        msg += ` 建行ccb签到领cc豆:当前等级:${result.data.level},${result.data.zhcRewardInfo.rewardName} 🎉 `;
-        if (result.data.receiveResult == 00) {
-            //判断是否浏览，是否领取奖励 此项为未浏览未领取奖励
-            let level = result.data.level;
-            let rewardId = result.data.zhcRewardInfo.id;
-            let rewardType = result.data.zhcRewardInfo.rewardType;
-            await getLevelReward(level, rewardId, rewardType);
-        } else {
-            console.log(` 等级奖励每日领cc豆: 任务已完成,明天再来吧~!`);
-            msg += ` 等级奖励每日领cc豆: 任务已完成,明天再来吧~!`;
-        }
-    } else {
-        console.log(` 建行ccb签到领cc豆:   失败 ❌ 了呢,原因未知！\n ${result} `);
-        msg += ` 建行ccb签到领cc豆:   失败 ❌ 了呢,原因未知！\n ${result} `;
-    }
-}
-
-
-/**
- * 等级奖励-每日领cc豆    httpPost
+ * 签到/签退    httpGet
  */
-async function getLevelReward(level, rewardId, rewardType) {
-    let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/mainVenue/receiveLevelReward?zhc_token=${ck}`,
-        headers: jhccb_headers,
-        body: JSON.stringify({ "userId": uid, "level": level, "rewardId": rewardId, "levelRewardType": rewardType })
+async function user_info() {
+    let url = {
+        url: `http://me.hxsd.com/home/newattendance/addStudentSign`,
+        headers: hxsd_headers,
+        // body: '',
     };
-    let result = await httpPost(Options, `建行ccb每日领cc豆`);
+    let result = await httpGet(url, `火星教育打卡`);
 
-    if (result.code == 200) {
-        day_num = result.data.currentDay;
-        // console.log(taskArr);
-        console.log(` 每日领cc豆:领取状态${result.message}    🎉 `);
-        msg += ` 每日领cc豆:领取状态${result.message}    🎉 `;
+    if (result.code == '0') {
+        console.log(`\n   火星教育打卡:今日签到${result.message}, 累计签到${result.data} 天,童鞋还要加强教育啊   💪🏻 `);
+        msg += `\n   火星教育打卡:今日签到${result.message}, 累计签到${result.data} 天,童鞋还要加强教育啊   💪🏻 `;
+    } else if (result.code == "200") {
+        console.log(`\n   ${new Date(new Date().getTime() + new Date().getTimezoneOffset() * 60 * 1000 + 8 * 60 * 60 * 1000).toLocaleString()} 火星教育打卡: ${result.data} `);
+        msg += `\n   ${new Date(new Date().getTime() + new Date().getTimezoneOffset() * 60 * 1000 + 8 * 60 * 60 * 1000).toLocaleString()} 火星教育打卡: ${result.data} `;
     } else {
-        console.log(` 每日领cc豆: 失败 ❌ 了呢,原因未知！\n  ${result} `);
-        msg += ` 每日领cc豆:   失败 ❌ 了呢,原因未知！\n ${result} `;
+        console.log(`\n   火星教育打卡: 失败 ❌ 了呢,原因未知！  ${result} `);
+        msg += `\n    火星教育打卡: 失败 ❌ 了呢,原因未知!`;
     }
 }
-
-/**
- * 成长值签到    httpPost
- */
-async function signin() {
-    let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/signin?zhc_token=${ck}`,
-        headers: jhccb_headers,
-        body: JSON.stringify({ "taskId": 9 })
-    };
-    let result = await httpPost(Options, `建行ccb成长值签到`);
-
-    if (result.code == 500) {
-        console.log(` 成长值签到: ${result.message} 🎉 `);
-        msg += ` 成长值签到: ${result.message} 🎉 `;
-        await getUserInfo();
-    } else {
-        console.log(` 成长值签到:   失败 ❌ 了呢,原因未知！\n ${result} `);
-        msg += ` 成长值签到:   失败 ❌ 了呢,原因未知！\n ${result} `;
-    }
-}
-
-/**
- * 成长值签到信息    httpPost
- */
-async function getUserInfo() {
-    let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/getUserInfo?zhc_token=${ck}`,
-        headers: jhccb_headers,
-        body: '{}'
-    };
-    let result = await httpPost(Options, `成长值签到查询`);
-
-    if (result.code == 200) {
-        day_num = result.data.currentDay;
-        // console.log(taskArr);
-        console.log(` 成长值签到查询:累计签到${result.data.currentDay}天, 获得成长值${result.data.settings[day_num - 1].rewards[0].rewardValue}    🎉 `);
-        msg += ` 成长值签到查询:累计签到${result.data.currentDay}天, 获得成长值${result.data.settings[day_num - 1].rewards[0].rewardValue}    🎉 `;
-    } else {
-        console.log(` 成长值签到信息: 失败 ❌ 了呢,原因未知！\n  ${result} `);
-        msg += ` 成长值签到信息:   失败 ❌ 了呢,原因未知！\n ${result} `;
-    }
-}
-
-/**
- * 任务中心 -- 浏览任务    httpPost
- */
-async function tasklist() {
-    let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/getTaskList?zhc_token=${ck}`,
-        headers: jhccb_headers,
-        body: JSON.stringify({ "publishChannels": "03", "regionId": "110000" })
-    };
-    let result = await httpPost(Options, `建行ccb任务中心`);
-    if (result.code == 200) {
-        let taskArr = result.data.浏览任务;
-        // console.log(taskArr);
-        for (let index = 0; index < taskArr.length; index++) {
-            if (taskArr[index].taskDetail.indeedBrowseSec == null && taskArr[index].taskDetail.completeStatus == null) {
-                //判断是否浏览，是否领取奖励 此项为未浏览未领取奖励
-                let name = taskArr[index].mainTitle;
-                let task_id = taskArr[index].id;
-                await dotask(name, task_id);
-                await dotask_receive(name, task_id);
-            } else if (taskArr[index].taskDetail.indeedBrowseSec == '1' && taskArr[index].taskDetail.completeStatus == '01') {
-                //判断是否浏览，是否领取奖励 此项为已浏览未领取奖励
-                let name = taskArr[index].mainTitle;
-                let task_id = taskArr[index].id;
-                await dotask_receive(name, task_id);
-            } else {
-                console.log(`${taskArr[index].mainTitle} : 任务已完成,明天再来吧~!`);
-            }
-        }
-        //await walk();
-
-    } else {
-        console.log(`任务列表: 失败 ❌ 了呢,原因未知!`);
-        console.log(result);
-    }
-}
-
-
-/**
-* 任务-浏览任务接口---进行任务    httpPost
-*/
-async function dotask(name, task_id) {
-    let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/browseTask?zhc_token=${ck}`,
-        headers: jhccb_headers,
-        body: JSON.stringify({ "taskId": task_id, "browseSec": 1 })
-    };
-    let result = await httpPost(Options, name);
-
-    if (result.code == 200) {
-        // console.log(taskArr);
-        console.log(`\n 浏览任务 - ${name}: ${result.message} 🎉 `);
-        msg += `\n 浏览任务 - ${name}: ${result.message} 🎉 `;
-    } else {
-        console.log(`\n 浏览任务 - ${name}:   失败 ❌ 了呢,原因未知！\n ${result} \n`);
-        msg += `\n 浏览任务 - ${name}:   失败 ❌ 了呢,原因未知！\n ${result} \n`;
-    }
-}
-
-
-/**
-* 任务-浏览任务接口---领取奖励    httpPost
-*/
-async function dotask_receive(name, task_id) {
-    let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/receiveReward?zhc_token=${ck}`,
-        headers: jhccb_headers,
-        body: JSON.stringify({ "taskId": task_id })
-    };
-    let result = await httpPost(Options, name);
-
-    if (result.code == 200) {
-        // console.log(taskArr);
-        console.log(`\n 领取奖励 - ${name}: ${result.message} 🎉 `);
-        msg += `\n 领取奖励 - ${name}: ${result.message} 🎉 `;
-    } else {
-        console.log(`\n 领取奖励 - ${name}:   失败 ❌ 了呢,原因未知！\n ${result} \n`);
-        msg += `\n 领取奖励 - ${name}:   失败 ❌ 了呢,原因未知！\n ${result} \n`;
-    }
-}
-
-/**
- * 任务中心 -- 支付消费    httpPost
- */
-async function tasklist_pay() {
-    let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/getTaskList?zhc_token=${ck}`,
-        headers: jhccb_headers,
-        body: JSON.stringify({ "publishChannels": "03", "regionId": "110000" })
-    };
-    let result = await httpPost(Options, `建行ccb任务中心`);
-    if (result.code == 200) {
-        let taskArr = result.data.支付消费;
-        // console.log(taskArr);
-        for (let index = 0; index < taskArr.length; index++) {
-            if (taskArr[index].taskDetail.joinStatus == null) {
-                //判断是否报名，没报名就去报名
-                let name = taskArr[index].mainTitle;
-                let task_id = taskArr[index].id;
-                await dotask_pay(name, task_id);
-                //await dotask_receive(name, task_id);
-                /* 此处判断任务是否完成
-                } else if (taskArr[index].taskDetail.joinStatus == 00) {
-                    //判断是否浏览，是否领取奖励 此项为已浏览未领取奖励
-                    let name = taskArr[index].mainTitle;
-                    let task_id = taskArr[index].id;
-                    await dotask_receive(name, task_id);
-                */
-            } else {
-                console.log(`${taskArr[index].mainTitle} : 任务已报名,努力完成吧骚年~!`);
-            }
-        }
-        //await walk();
-
-    } else {
-        console.log(`任务列表: 失败 ❌ 了呢,原因未知!`);
-        console.log(result);
-    }
-}
-
-/**
-* 任务-支付消费任务接口---报名    httpPost
-*/
-async function dotask_pay(name, task_id) {
-    let Options = {
-        url: `https://m3.dmsp.ccb.com/api/businessCenter/taskCenter/joinTask?zhc_token=${ck}`,
-        headers: jhccb_headers,
-        body: { "taskId": task_id, "channelId": "03", "ccbFlag": "Y", "token": ck }
-    };
-    let result = await httpPost(Options, name);
-
-    if (result.code == 200) {
-        // console.log(taskArr);
-        console.log(`\n 任务报名 - ${name}: ${result.message} 🎉 `);
-        msg += `\n 任务报名 - ${name}: ${result.message} 🎉 `;
-    } else {
-        console.log(`\n 任务报名 - ${name}:   失败 ❌ 了呢,原因未知！\n ${result} \n`);
-        msg += `\n 任务报名 - ${name}:   失败 ❌ 了呢,原因未知！\n ${result} \n`;
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
 
 
 //#region 固定代码
@@ -410,7 +137,6 @@ async function getCks(ck, str) {
 }
 
 // ============================================发送消息============================================ \\
-
 async function SendMsg(message) {
     if (!message) return;
 
@@ -425,89 +151,6 @@ async function SendMsg(message) {
         console.log(message);
     }
 }
-
-/**
- * 随机数生成
- */
-
-function randomString(e) {
-    e = e || 32;
-    let t = "QWERTYUIOPASDFGHJKLZXCVBNM1234567890",
-        a = t.length,
-        n = "";
-
-    for (i = 0; i < e; i++) n += t.charAt(Math.floor(Math.random() * a));
-    return n;
-}
-
-/**
- * 随机整数生成
- */
-
-function randomInt(min, max) {
-    return Math.round(Math.random() * (max - min) + min);
-}
-
-
-/**
- * 时间戳 13位
- */
-
-function ts13() {
-    return Math.round(new Date().getTime()).toString();
-}
-
-/**
- * 时间戳 10位
- */
-
-function ts10() {
-    return Math.round(new Date().getTime() / 1000).toString();
-}
-
-/**
- * 获取当前小时数
- */
-
-function local_hours() {
-    let myDate = new Date();
-    h = myDate.getHours();
-    return h;
-}
-
-/**
- * 获取当前分钟数
- */
-
-function local_minutes() {
-    let myDate = new Date();
-    m = myDate.getMinutes();
-    return m;
-}
-
-
-//每日网抑云
-/**
-function wyy(timeout = 3 * 1000) {
-   return new Promise((resolve) => {
-       let url = {
-           url: `https://keai.icu/apiwyy/api`
-       }
-       $.get(url, async (err, resp, data) => {
-           try {
-               data = JSON.parse(data)
-               console.log(`\n 【网抑云时间】: ${data.content}  by--${data.music}`);
- 
-           } catch (e) {
-               $.logErr(e, resp);
-           } finally {
-               resolve()
-           }
-       }, timeout
-       )
-   })
-}
-*/
 
 // ============================================ get请求 ============================================ \\
 async function httpGet(getUrlObject, tip, timeout = 3 * 1000) {
@@ -589,82 +232,11 @@ async function httpPost(postUrlObject, tip, timeout = 3 * 1000) {
     });
 }
 
-
 // ============================================ debug调试 ============================================ \\
 function debugLog(...args) {
     if (debug) {
         console.log(...args);
     }
-}
-
-//#endregion
-function MD5Encrypt(a) {
-    function b(a, b) {
-        return a << b | a >>> 32 - b
-    }
-
-    function c(a, b) {
-        var c, d, e, f, g;
-        return e = 2147483648 & a, f = 2147483648 & b, c = 1073741824 & a, d = 1073741824 & b, g = (1073741823 & a) + (1073741823 & b), c & d ? 2147483648 ^ g ^ e ^ f : c | d ? 1073741824 & g ? 3221225472 ^ g ^ e ^ f : 1073741824 ^ g ^ e ^ f : g ^ e ^ f
-    }
-
-    function d(a, b, c) {
-        return a & b | ~a & c
-    }
-
-    function e(a, b, c) {
-        return a & c | b & ~c
-    }
-
-    function f(a, b, c) {
-        return a ^ b ^ c
-    }
-
-    function g(a, b, c) {
-        return b ^ (a | ~c)
-    }
-
-    function h(a, e, f, g, h, i, j) {
-        return a = c(a, c(c(d(e, f, g), h), j)), c(b(a, i), e)
-    }
-
-    function i(a, d, f, g, h, i, j) {
-        return a = c(a, c(c(e(d, f, g), h), j)), c(b(a, i), d)
-    }
-
-    function j(a, d, e, g, h, i, j) {
-        return a = c(a, c(c(f(d, e, g), h), j)), c(b(a, i), d)
-    }
-
-    function k(a, d, e, f, h, i, j) {
-        return a = c(a, c(c(g(d, e, f), h), j)), c(b(a, i), d)
-    }
-
-    function l(a) {
-        for (var b, c = a.length, d = c + 8, e = (d - d % 64) / 64, f = 16 * (e + 1), g = new Array(f - 1), h = 0, i = 0; c > i;) b = (i - i % 4) / 4, h = i % 4 * 8, g[b] = g[b] | a.charCodeAt(i) << h, i++;
-        return b = (i - i % 4) / 4, h = i % 4 * 8, g[b] = g[b] | 128 << h, g[f - 2] = c << 3, g[f - 1] = c >>> 29, g
-    }
-
-    function m(a) {
-        var b, c, d = "", e = "";
-        for (c = 0; 3 >= c; c++) b = a >>> 8 * c & 255, e = "0" + b.toString(16), d += e.substr(e.length - 2, 2);
-        return d
-    }
-
-    function n(a) {
-        a = a.replace(/\r\n/g, "\n");
-        for (var b = "", c = 0; c < a.length; c++) {
-            var d = a.charCodeAt(c);
-            128 > d ? b += String.fromCharCode(d) : d > 127 && 2048 > d ? (b += String.fromCharCode(d >> 6 | 192), b += String.fromCharCode(63 & d | 128)) : (b += String.fromCharCode(d >> 12 | 224), b += String.fromCharCode(d >> 6 & 63 | 128), b += String.fromCharCode(63 & d | 128))
-        }
-        return b
-    }
-
-    var o, p, q, r, s, t, u, v, w, x = [], y = 7, z = 12, A = 17, B = 22, C = 5, D = 9, E = 14, F = 20, G = 4, H = 11,
-        I = 16, J = 23, K = 6, L = 10, M = 15, N = 21;
-    for (a = n(a), x = l(a), t = 1732584193, u = 4023233417, v = 2562383102, w = 271733878, o = 0; o < x.length; o += 16) p = t, q = u, r = v, s = w, t = h(t, u, v, w, x[o + 0], y, 3614090360), w = h(w, t, u, v, x[o + 1], z, 3905402710), v = h(v, w, t, u, x[o + 2], A, 606105819), u = h(u, v, w, t, x[o + 3], B, 3250441966), t = h(t, u, v, w, x[o + 4], y, 4118548399), w = h(w, t, u, v, x[o + 5], z, 1200080426), v = h(v, w, t, u, x[o + 6], A, 2821735955), u = h(u, v, w, t, x[o + 7], B, 4249261313), t = h(t, u, v, w, x[o + 8], y, 1770035416), w = h(w, t, u, v, x[o + 9], z, 2336552879), v = h(v, w, t, u, x[o + 10], A, 4294925233), u = h(u, v, w, t, x[o + 11], B, 2304563134), t = h(t, u, v, w, x[o + 12], y, 1804603682), w = h(w, t, u, v, x[o + 13], z, 4254626195), v = h(v, w, t, u, x[o + 14], A, 2792965006), u = h(u, v, w, t, x[o + 15], B, 1236535329), t = i(t, u, v, w, x[o + 1], C, 4129170786), w = i(w, t, u, v, x[o + 6], D, 3225465664), v = i(v, w, t, u, x[o + 11], E, 643717713), u = i(u, v, w, t, x[o + 0], F, 3921069994), t = i(t, u, v, w, x[o + 5], C, 3593408605), w = i(w, t, u, v, x[o + 10], D, 38016083), v = i(v, w, t, u, x[o + 15], E, 3634488961), u = i(u, v, w, t, x[o + 4], F, 3889429448), t = i(t, u, v, w, x[o + 9], C, 568446438), w = i(w, t, u, v, x[o + 14], D, 3275163606), v = i(v, w, t, u, x[o + 3], E, 4107603335), u = i(u, v, w, t, x[o + 8], F, 1163531501), t = i(t, u, v, w, x[o + 13], C, 2850285829), w = i(w, t, u, v, x[o + 2], D, 4243563512), v = i(v, w, t, u, x[o + 7], E, 1735328473), u = i(u, v, w, t, x[o + 12], F, 2368359562), t = j(t, u, v, w, x[o + 5], G, 4294588738), w = j(w, t, u, v, x[o + 8], H, 2272392833), v = j(v, w, t, u, x[o + 11], I, 1839030562), u = j(u, v, w, t, x[o + 14], J, 4259657740), t = j(t, u, v, w, x[o + 1], G, 2763975236), w = j(w, t, u, v, x[o + 4], H, 1272893353), v = j(v, w, t, u, x[o + 7], I, 4139469664), u = j(u, v, w, t, x[o + 10], J, 3200236656), t = j(t, u, v, w, x[o + 13], G, 681279174), w = j(w, t, u, v, x[o + 0], H, 3936430074), v = j(v, w, t, u, x[o + 3], I, 3572445317), u = j(u, v, w, t, x[o + 6], J, 76029189), t = j(t, u, v, w, x[o + 9], G, 3654602809), w = j(w, t, u, v, x[o + 12], H, 3873151461), v = j(v, w, t, u, x[o + 15], I, 530742520), u = j(u, v, w, t, x[o + 2], J, 3299628645), t = k(t, u, v, w, x[o + 0], K, 4096336452), w = k(w, t, u, v, x[o + 7], L, 1126891415), v = k(v, w, t, u, x[o + 14], M, 2878612391), u = k(u, v, w, t, x[o + 5], N, 4237533241), t = k(t, u, v, w, x[o + 12], K, 1700485571), w = k(w, t, u, v, x[o + 3], L, 2399980690), v = k(v, w, t, u, x[o + 10], M, 4293915773), u = k(u, v, w, t, x[o + 1], N, 2240044497), t = k(t, u, v, w, x[o + 8], K, 1873313359), w = k(w, t, u, v, x[o + 15], L, 4264355552), v = k(v, w, t, u, x[o + 6], M, 2734768916), u = k(u, v, w, t, x[o + 13], N, 1309151649), t = k(t, u, v, w, x[o + 4], K, 4149444226), w = k(w, t, u, v, x[o + 11], L, 3174756917), v = k(v, w, t, u, x[o + 2], M, 718787259), u = k(u, v, w, t, x[o + 9], N, 3951481745), t = c(t, p), u = c(u, q), v = c(v, r), w = c(w, s);
-    var O = m(t) + m(u) + m(v) + m(w);
-    return O.toLowerCase()
 }
 
 function Env(t, e) {
