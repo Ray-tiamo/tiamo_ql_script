@@ -84,15 +84,15 @@ async function tips(ckArr) {
 
 async function start() {
 
-    console.log("➡️开始 每日签到");
+    console.log("\n ➡️开始 每日签到 \n");
     await getsign();
     await $.wait(2 * 1000);
 
-    console.log("➡️开始 完成日常任务");
+    console.log("\n ➡️开始 完成日常任务 \n");
     await tasklist();
     await $.wait(2 * 1000);
 
-    console.log("➡️开始 领取任务奖励");
+    console.log("\n ➡️开始 领取任务奖励 \n");
     await tasklist_prize();
     await $.wait(2 * 1000);
 }
@@ -160,7 +160,7 @@ async function tasklist() {
                     console.log(`${taskArr[index].name}: 任务已完成`);
                     msg += `${taskArr[index].name}: 任务已完成 \n`;
                 } else {
-                    console.log(`➡️开始 执行任务: ${taskArr[index].name}`);
+                    // console.log(`➡️开始 执行任务: ${taskArr[index].name}`);
                     taskid = taskArr[index].id;
                     await dotask_jump(taskid);
                     await $.wait(2 * 1000);
@@ -171,7 +171,7 @@ async function tasklist() {
                     console.log(`${taskArr[index].name}: 任务已完成`);
                     msg += `${taskArr[index].name}: 任务已完成 \n`;
                 } else {
-                    console.log(`➡️开始 执行任务: ${taskArr[index].name}`);
+                    // console.log(`➡️开始 执行任务: ${taskArr[index].name}`);
                     taskid = taskArr[index].id;
                     await dotask_Browsetoken(taskid);
                     await $.wait(2 * 1000);
@@ -206,7 +206,7 @@ async function dotask_jump(taskid) {
     };
     let result = await httpPost(Options, `执行任务_jump/Subscribe`);
     if (result.code == 0) {
-        prize = result.result[0].prize / 100;
+        prize = Number(result.result[0].prize) / 100;
         console.log(`任务:${result.result[0].subPlayName}完成，奖励:${prize}回馈金 🎉 \n`);
         msg += `任务:${result.result[0].subPlayName}完成，奖励:${prize}回馈金 🎉 \n`;
     } else {
@@ -271,11 +271,11 @@ async function dotask_Browse(taskid, token) {
 
 
 /**
-* 任务中心---任务奖励列表    httpPost
+* 任务中心---查询任务奖励列表    httpPost
 */
 async function tasklist_prize() {
     let Options = {
-        url: `https://mystore-01api.watsonsvip.com.cn/cloudapi/v2/users/tasks`,
+        url: `https://mystore-01api.watsonsvip.com.cn/cloudapi/v2/users/bubbles`,
         headers: {
             'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.29(0x18001d38) NetType/WIFI Language/zh_CN',
             'Content-Type': 'application/json',
@@ -285,22 +285,24 @@ async function tasklist_prize() {
             'unionId': unionid,
         },
     };
-    let result = await httpGet(Options, `任务列表`);
+    let result = await httpGet(Options, `任务奖励列表`);
     if (result.code == 0) {
-        let taskArr = result.result.list;
+        let taskArr = result.result;
         // 取任务数量;
         for (let index = 0; index < taskArr.length; index++) {
-            if (taskArr[index].state == 2 && taskArr[index].prizeId != 0 && taskArr[index].prizeReceiveStatus == 0) {
-                //取任务奖励id
-                prizeId = taskArr[index].prizeId;
-                await dotask_prize(prizeId);
+            if (taskArr[index].prizeAlarmMessage == "待领取") {
+                prizeId = taskArr[index].prizeId; //取任务奖励id
+                taskName = taskArr[index].taskName //取任务名称
+                await dotask_prize(prizeId,taskName);
                 await $.wait(3 * 1000);
-            } else if (taskArr[index].state == 2 && taskArr[index].prizeReceiveStatus != 0) {
+            /**
+            } else if (taskArr[index].state == 2 && taskArr[index].prizeReceiveStatus == 1) {
                 console.log(`任务 ${taskArr[index].name} : 已完成，请明天再来！ \n`);
                 msg += `任务 ${taskArr[index].name} : 已完成，请明天再来！ \n`;
+            */
             } else {
-                console.log(`任务 ${taskArr[index].name} : 出错，请检查数据！ \n`);
-                msg += `任务 ${taskArr[index].name} : 出错，请检查数据！ \n`;
+                console.log(`任务 ${taskArr[index].name} : 出错，请检查数据！`);
+                msg += `任务 ${taskArr[index].name} : 出错，请检查数据！`;
             }
         }
     } else {
@@ -311,9 +313,9 @@ async function tasklist_prize() {
 
 
 /**
-* 任务接口---收取任务奖励    httpPost
+* 任务接口---领取任务奖励    httpPost
 */
-async function dotask_prize(prizeId) {
+async function dotask_prize(prizeId,taskName) {
     let Options = {
         url: `https://mystore-01api.watsonsvip.com.cn/cloudapi/v2/users/receive`,
         headers: {
@@ -326,14 +328,14 @@ async function dotask_prize(prizeId) {
         },
         body: JSON.stringify({ "prizeId": prizeId })
     };
-    let result = await httpPost(Options, `收取任务奖励`);
-    if (result.code == 200) {
-        prizenum = Number(result.result[0].grantNum) / 100;
-        console.log(`\n 任务: ${result.result.subPlayName} 成功收取${prizenum}奖励金 🎉 \n`);
-        msg += `\n 任务: ${result.result.subPlayName} 成功收取${prizenum}奖励金 🎉 \n`;
-    } else if (result.code == 11000) {
-        console.log(`任务 ${taskArr[index].name} : 收取失败,提示:${result.errorMsg} \n`);
-        msg += `任务 ${taskArr[index].name} : 收取失败,提示:${result.errorMsg} \n`;
+    let result = await httpPost(Options, `领取任务奖励`);
+    if (result.code == 0) {
+        prizenum = Number(result.result.grantNum) / 100;
+        console.log(`\n 任务: ${taskName} 成功收取${prizenum}奖励金 🎉 \n`);
+        msg += `\n 任务: ${taskName} 成功收取${prizenum}奖励金 🎉 \n`;
+    } else if (result.code == 1403 || result.code == 11000) {
+        console.log(`任务 ${taskName} : 收取失败,提示:${result.errorMsg} \n`);
+        msg += `任务 ${taskName} : 收取失败,提示:${result.errorMsg} \n`;
     } else {
         console.log(`\n 收取任务奖励 : 失败 ❌ 了呢,原因未知！\n ${result} \n`);
         msg += `\n 收取任务奖励 : 失败 ❌ 了呢,原因未知！\n ${result} \n`;
