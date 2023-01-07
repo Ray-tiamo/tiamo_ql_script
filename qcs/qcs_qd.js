@@ -2,7 +2,7 @@
  * 脚本地址: qcs_hkj_qd.js
  * 转载请留信息,谢谢
  *
- * 屈臣氏回馈金签到
+ * 屈臣氏签到
  *
  * cron 30 6 * * *  Reliablc_tiamo_script/lxby.js
  *
@@ -11,8 +11,9 @@
  * 感谢所有测试人员
  * ========= 青龙--配置文件 =========
  * 变量格式: export qcsck='***'  多个账号用 @ 或者 换行分割
- * url:(https://mystore-01api.watsonsvip.com.cn/cloudapi/v2/users/tasks)，截取链提交数据内的内容
- * 抓取链接提交中的Authorization内容(不要Bearer )+authorizer_appid内容+openid内容+unionid内容 用&分隔开
+ * 回馈金获取参数链接:(https://mystore-01api.watsonsvip.com.cn/cloudapi/v2/users/tasks)，截取链提交数据内协议头的内容 Authorization|openid|unionid
+ * 日常签到获取参数链接:(https://iws.watsonsvip.com.cn/watsons-member-center/mp/user/wxLogin)，截取链提交数据内协议头的内容 Authorization
+ * ck格式:回馈金签到的Authorization内容(获取的值,不要Bearer )+openid内容+unionid内容+日常签到的Authorization(日常签到获取的值,不要Bearer)内容 用&分隔开
  * 
  */
 
@@ -23,17 +24,17 @@ const debug = 0 		//0为关闭调试，1为打开调试,默认为0
 ///////////////////////////////////////////////////////////////////
 let ckStr = process.env.qcshkjck;
 
-// 账号必备参数↓↓↓
+// 必备参数↓↓↓
+let authorizer_appid = "wx1ffbd6927043dff7";
 let Authorization = "";
-let authorizer_appid = "";
 let openid = "";
 let unionid = "";
-
+let Authorization1 = "";
 let msg = "";
 let ck_status = true;
 
 ///////////////////////////////////////////////////////////////////
-let Version = '\n 逐鹿少年   2022/12/31     屈臣氏回馈金签到脚本'
+let Version = '\n 逐鹿少年   2022/12/31     屈臣氏签到脚本'
 let thank = ``
 let test = `脚本测试中,有bug及时反馈! `
 
@@ -71,9 +72,8 @@ async function tips(ckArr) {
         debugLog(`【debug】 这是你第 ${num} 账号信息:\n ${ck}`);
 
         Authorization = 'Bearer ' + ck[0];
-        authorizer_appid = ck[1];
-        openid = ck[2];
-        unionid = ck[3];
+        openid = ck[1];
+        unionid = ck[2];
 
         await start();
     }
@@ -84,21 +84,93 @@ async function tips(ckArr) {
 
 async function start() {
 
-    console.log("\n ➡️开始 每日签到 \n");
-    await getsign();
+    console.log("➡️开始 每日签到");
+    if (ck[3] != null) {
+        Authorization1 = 'Bearer ' + ck[3];
+        await singinstar();
+        await $.wait(2 * 1000);
+    } else {
+        console.log(` ❌日常签到ck不存在,已跳过 `);
+        msg += ` ❌日常签到ck不存在,已跳过 `;
+    }
+
+    console.log("➡️开始 回馈金每日签到");
+    await getsigninfo();
     await $.wait(2 * 1000);
 
-    console.log("\n ➡️开始 完成日常任务 \n");
+    console.log("➡️开始 回馈金每日任务");
     await tasklist();
     await $.wait(2 * 1000);
 
-    console.log("\n ➡️开始 领取任务奖励 \n");
+    console.log("➡️开始 回馈金领取奖励");
     await tasklist_prize();
     await $.wait(2 * 1000);
+
 }
 
 /**
- * 每日回馈金签到(ok)    httpPost
+ * 每日签到    httpGet
+ */
+async function singinstar() {
+    let Options = {
+        url: `https://iws.watsonsvip.com.cn/watsons-member-center/mp/checkin/user/history/stats`,
+        headers: {
+            'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.29(0x18001d38) NetType/WIFI Language/zh_CN',
+            'Content-Type': 'application/json',
+            'Authorization': Authorization1,
+        },
+    };
+    let result = await httpGet(Options, `每日签到`);
+    if (result.code == 0 ) {
+            console.log(` 每日签到: 今日签到成功,连续签到:${result.result.totalDayCount}天 🎉 `);
+            msg += `\n 每日签到: 今日签到成功,连续签到:${result.result.totalDayCount}天 🎉 `;
+    } else {
+        console.log(` 每日签到查询: 失败 ❌ 了呢,原因未知！\n ${result} `);
+        msg += `\n 每日签到查询: 失败 ❌ 了呢,原因未知！\n ${result} `;
+    }
+}
+
+/**
+ * 回馈金签到查询    httpGet
+ */
+async function getsigninfo() {
+    let Options = {
+        url: `https://mystore-01api.watsonsvip.com.cn/wx/signIn/index?unionId=${unionid}`,
+        headers: {
+            'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.29(0x18001d38) NetType/WIFI Language/zh_CN',
+            'Content-Type': 'application/json',
+            'authorizer_appid': authorizer_appid,
+            'Authorization': Authorization,
+            'openId': openid,
+            'unionId': unionid,
+        },
+    };
+    let result = await httpGet(Options, `回馈金签到查询`);
+    if (result.code == 0 && result.result.signInStatus.signedToday == true) {
+        // 今日已签到
+        if (result.result.signInStatus.rewardType == 1) {
+            // 奖励类型 1==回馈金，3==优惠券
+            prize = Number(result.result.signInStatus.todayReward) / 100;
+            console.log(` 回馈金签到查询: 今日已签到,连续签到:${result.result.signInStatus.continueDays}天,今日奖励: ${prize}回馈金 🎉 `);
+            msg += ` 回馈金签到查询: 今日已签到,连续签到:${result.result.signInStatus.continueDays}天,今日奖励: ${prize}回馈金 🎉 `;
+        } else if (result.result.signInStatus.rewardType == 3) {
+            console.log(` 回馈金签到查询: 今日已签到,连续签到:${result.result.signInStatus.continueDays}天,今日奖励: ${result.result.signInStatus.rewardName}优惠券 🎉 `);
+            msg += ` 回馈金签到查询: 今日已签到,连续签到:${result.result.signInStatus.continueDays}天,今日奖励: ${result.result.signInStatus.rewardName}优惠券 🎉 `;
+        } else {
+            console.log(` 回馈金签到查询: 今日已签到,奖励未知！\n ${result} `);
+            msg += ` 回馈金签到查询: 今日已签到,奖励未知！\n ${result} `;
+        }
+    } else if (result.result.code == 0 && result.result.signInStatus.signedToday == false) {
+        // 今日未签到
+        await getsign();
+    } else {
+        console.log(` 回馈金签到查询: 失败 ❌ 了呢,原因未知！\n ${result} `);
+        msg += ` 回馈金签到查询: 失败 ❌ 了呢,原因未知！\n ${result} `;
+    }
+}
+
+/**
+ * 回馈金每日签到    httpPost
  */
 async function getsign() {
     let Options = {
@@ -117,15 +189,12 @@ async function getsign() {
     if (result.code == 0) {
         console.log(` 每日回馈金签到: 成功 ,连续签到: ${result.result.continueDays},奖励金额: ${result.result.rewardAmount} 🎉 `);
         msg += ` 每日回馈金签到: 成功 ,连续签到: ${result.result.continueDays},奖励金额: ${result.result.rewardAmount} 🎉 \n`;
-
     } else if (result.code == 11000) {
         console.log(` 每日回馈金签到: ${result.errorMsg} 🎉 `);
         msg += ` 每日回馈金签到: ${result.errorMsg} 🎉 `;
-        // return ck_status = false;
     } else {
         console.log(` 每日回馈金签到: 失败 ❌ 了呢,原因未知！\n ${result} `);
         msg += ` 每日回馈金签到: 失败 ❌ 了呢,原因未知！\n ${result} `;
-        // return ck_status = false;
     }
 }
 
@@ -183,8 +252,8 @@ async function tasklist() {
         }
         //await walk();
     } else {
-        console.log(`任务列表: 失败 ❌ 了呢,原因未知!`);
-        msg += `任务列表: 失败 ❌ 了呢,原因未知! \n`;
+        console.log(`任务列表: 失败 ❌ 了呢,原因未知! \n${result}`);
+        msg += `任务列表: 失败 ❌ 了呢,原因未知! \n${result}`;
     }
 }
 
@@ -207,11 +276,11 @@ async function dotask_jump(taskid) {
     let result = await httpPost(Options, `执行任务_jump/Subscribe`);
     if (result.code == 0) {
         prize = Number(result.result[0].prize) / 100;
-        console.log(`任务:${result.result[0].subPlayName}完成，奖励:${prize}回馈金 🎉 \n`);
-        msg += `任务:${result.result[0].subPlayName}完成，奖励:${prize}回馈金 🎉 \n`;
+        console.log(`任务:${result.result[0].subPlayName}完成，奖励:${prize}回馈金 🎉 `);
+        msg += `任务:${result.result[0].subPlayName}完成，奖励:${prize}回馈金 🎉 `;
     } else {
-        console.log(`\n 做任务${taskid} : 失败 ❌ 了呢,原因未知！\n ${result} \n`);
-        msg += `\n 做任务${taskid} : 失败 ❌ 了呢,原因未知！\n ${result} \n`;
+        console.log(` 做任务${taskid} : 失败 ❌ 了呢,原因未知！\n ${result} `);
+        msg += ` 做任务${taskid} : 失败 ❌ 了呢,原因未知！\n ${result} `;
     }
 }
 
@@ -261,11 +330,11 @@ async function dotask_Browse(taskid, token) {
     let result = await httpPost(Options, `执行任务_Browse`);
     if (result.code == 0) {
         prize = Number(result.result[0].grantNum) / 100;
-        console.log(` 任务:${result.result[0].subPlayName}完成，奖励:${prize}回馈金 🎉 \n`);
-        msg += ` 任务:${result.result[0].subPlayName}完成，奖励:${prize}回馈金 🎉 \n`;
+        console.log(` 任务:${result.result[0].subPlayName}完成，奖励:${prize}回馈金 🎉`);
+        msg += ` 任务:${result.result[0].subPlayName}完成，奖励:${prize}回馈金 🎉`;
     } else {
-        console.log(` 执行任务${taskid} : 失败 ❌ 了呢,原因未知！\n ${result} \n`);
-        msg += ` 执行任务${taskid} : 失败 ❌ 了呢,原因未知！\n ${result} \n`;
+        console.log(` 执行任务${taskid} : 失败 ❌ 了呢,原因未知！\n ${result}`);
+        msg += ` 执行任务${taskid} : 失败 ❌ 了呢,原因未知！\n ${result}`;
     }
 }
 
@@ -286,28 +355,27 @@ async function tasklist_prize() {
         },
     };
     let result = await httpGet(Options, `任务奖励列表`);
-    if (result.code == 0) {
-        let taskArr = result.result;
-        // 取任务数量;
+    let taskArr = result.result;
+    // 取任务数量;
+    if (result.code == 0 && taskArr.length != 0) {
+
         for (let index = 0; index < taskArr.length; index++) {
             if (taskArr[index].prizeAlarmMessage == "待领取") {
                 prizeId = taskArr[index].prizeId; //取任务奖励id
-                taskName = taskArr[index].taskName //取任务名称
-                await dotask_prize(prizeId,taskName);
+                taskName = taskArr[index].taskName; //取任务名称
+                await dotask_prize(prizeId, taskName);
                 await $.wait(3 * 1000);
-            /**
-            } else if (taskArr[index].state == 2 && taskArr[index].prizeReceiveStatus == 1) {
-                console.log(`任务 ${taskArr[index].name} : 已完成，请明天再来！ \n`);
-                msg += `任务 ${taskArr[index].name} : 已完成，请明天再来！ \n`;
-            */
             } else {
-                console.log(`任务 ${taskArr[index].name} : 出错，请检查数据！`);
-                msg += `任务 ${taskArr[index].name} : 出错，请检查数据！`;
+                console.log(` 任务 ${taskArr[index].name} : 出错, 请检查数据！`);
+                msg += ` 任务 ${taskArr[index].name} : 出错, 请检查数据！`;
             }
         }
+    } else if (result.code == 0 && taskArr.length == 0) {
+        console.log(` 任务已全部领取奖励, 请明天再来吧!`);
+        msg += ` 任务已全部领取奖励, 请明天再来吧!`;
     } else {
-        console.log(`\n 任务奖励列表: 失败 ❌ 了呢,原因未知! \n`);
-        msg += `\n 任务奖励列表: 失败 ❌ 了呢,原因未知! \n`;
+        console.log(` 任务奖励列表: 失败 ❌ 了呢,原因未知!`);
+        msg += ` 任务奖励列表: 失败 ❌ 了呢,原因未知!`;
     }
 }
 
@@ -315,7 +383,7 @@ async function tasklist_prize() {
 /**
 * 任务接口---领取任务奖励    httpPost
 */
-async function dotask_prize(prizeId,taskName) {
+async function dotask_prize(prizeId, taskName) {
     let Options = {
         url: `https://mystore-01api.watsonsvip.com.cn/cloudapi/v2/users/receive`,
         headers: {
@@ -331,14 +399,14 @@ async function dotask_prize(prizeId,taskName) {
     let result = await httpPost(Options, `领取任务奖励`);
     if (result.code == 0) {
         prizenum = Number(result.result.grantNum) / 100;
-        console.log(`\n 任务: ${taskName} 成功收取${prizenum}奖励金 🎉 \n`);
-        msg += `\n 任务: ${taskName} 成功收取${prizenum}奖励金 🎉 \n`;
+        console.log(` 任务: ${taskName} 成功收取${prizenum}奖励金 🎉 `);
+        msg += ` 任务: ${taskName} 成功收取${prizenum}奖励金 🎉`;
     } else if (result.code == 1403 || result.code == 11000) {
-        console.log(`任务 ${taskName} : 收取失败,提示:${result.errorMsg} \n`);
-        msg += `任务 ${taskName} : 收取失败,提示:${result.errorMsg} \n`;
+        console.log(` 任务 ${taskName} : 收取失败,提示:${result.errorMsg}`);
+        msg += ` 任务 ${taskName} : 收取失败,提示:${result.errorMsg}`;
     } else {
-        console.log(`\n 收取任务奖励 : 失败 ❌ 了呢,原因未知！\n ${result} \n`);
-        msg += `\n 收取任务奖励 : 失败 ❌ 了呢,原因未知！\n ${result} \n`;
+        console.log(` 收取任务奖励 : 失败 ❌ 了呢,原因未知！\n ${result}`);
+        msg += ` 收取任务奖励 : 失败 ❌ 了呢,原因未知！\n ${result}`;
     }
 }
 
@@ -380,7 +448,6 @@ async function getCks(ck, str) {
 // ============================================发送消息============================================ \\
 async function SendMsg(message) {
     if (!message) return;
-
     if (Notify > 0) {
         if ($.isNode()) {
             let notify = require("./sendNotify");
