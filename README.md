@@ -3,9 +3,6 @@
 
 禁止大范围宣传本项目，谢谢配合
 
-此项目的用途
-
-
 ### Hi there 👋
 [![Tiamo's github stats](https://github-readme-stats.vercel.app/api?username=Ray-tiamo&show_icons=true)](https://github.com/Ray-tiamo)
 
