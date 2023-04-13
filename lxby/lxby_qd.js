@@ -20,7 +20,7 @@ const notify = $.isNode() ? require("./sendNotify") : "";
 const Notify = 1 		//0为关闭通知，1为打开通知,默认为1
 const debug = 0 		//0为关闭调试，1为打开调试,默认为0
 ///////////////////////////////////////////////////////////////////
-let ckStr = process.env.lxbyhd;
+let ckStr = process.env.lxbyck;
 
 let openid = "o2bfX5U5w7e8mMPWhQtCIkaGdl0c";
 let unionid = "ot988v9wD4SBHfkYU6HbLgCnuAt0";
